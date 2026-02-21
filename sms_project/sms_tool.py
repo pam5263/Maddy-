@@ -1,4 +1,15 @@
 import os
+import sys
+
+# Compatibility shim for pkg_resources (required by telesign on newer Python versions)
+try:
+    import pkg_resources
+except ImportError:
+    from unittest.mock import MagicMock
+    mock_pkg = MagicMock()
+    mock_pkg.get_distribution.return_value.version = "4.0.0"
+    sys.modules['pkg_resources'] = mock_pkg
+
 import random
 from twilio.rest import Client as TwilioClient
 import vonage
