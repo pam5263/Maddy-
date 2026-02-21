@@ -39,7 +39,29 @@ class LicenseManager:
 
     def get_token(self):
         # Generate a unique token based on machine info
-        hwid = str(uuid.getnode()) + socket.gethostname()
+        components = [str(uuid.getnode()), socket.gethostname()]
+
+        if os.name == 'nt':
+            try:
+                import subprocess
+                # Get System UUID on Windows
+                cmd = 'wmic csproduct get uuid'
+                uuid_out = subprocess.check_output(cmd, shell=True).decode().split('\n')[1].strip()
+                if uuid_out: components.append(uuid_out)
+            except:
+                pass
+        else:
+            # Get Machine ID on Linux/Unix
+            for path in ['/etc/machine-id', '/var/lib/dbus/machine-id']:
+                if os.path.exists(path):
+                    try:
+                        with open(path, 'r') as f:
+                            components.append(f.read().strip())
+                        break
+                    except:
+                        continue
+
+        hwid = ":".join(components)
         return hashlib.sha256(hwid.encode()).hexdigest()[:16].upper()
 
     def generate_key(self, token):
@@ -78,6 +100,16 @@ class LicenseManager:
                         key = f.read().strip()
                     if key == self.generate_key(token):
                         return True, token
+                    elif key:
+                        # Security Alert: Key exists but doesn't match this machine
+                        print("\n\033[1;31m[!] SECURITY ALERT: License mismatch detected.\033[0m")
+                        print("[!] This license was activated for a different device.")
+                        print("[!] Deleting invalid license file to prevent unauthorized use.")
+                        try:
+                            os.remove(path)
+                        except:
+                            pass
+                        time.sleep(3)
                 except:
                     continue
 
