@@ -18,10 +18,11 @@ A comprehensive bulk SMS sending tool supporting multiple providers.
 
 ## Setup
 1. **License Activation**:
-   - Run `python3 sms_tool.py`.
-   - Copy your System Token.
-   - Run `python3 generate_key.py <TOKEN>` to get your Activation Key.
-   - Create a file named `license.key` and paste the key.
+   - Run the tool (`start.bat` or `python3 sms_tool.py`).
+   - The tool will show your **System Token**.
+   - Provide this token to the Administrator to receive your **Activation Key**.
+   - Enter the key directly into the tool when prompted.
+   - The tool will automatically activate and hide the license file.
 2. **API Key Configuration**:
    There are two ways to provide your API keys:
 

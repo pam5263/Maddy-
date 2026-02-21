@@ -32,7 +32,9 @@ from requests.exceptions import RequestException
 
 class LicenseManager:
     def __init__(self):
-        self.key_file = os.path.join(os.path.dirname(__file__), "license.key")
+        self.base_dir = os.path.dirname(os.path.abspath(__file__))
+        self.key_file = os.path.join(self.base_dir, "license.key")
+        self.hidden_key_file = os.path.join(self.base_dir, ".license.key")
         self.salt = "MAGXXIC_VOT_SECRET_SALT_2024"
 
     def get_token(self):
@@ -44,17 +46,67 @@ class LicenseManager:
         # Algorithm to generate a valid key from a token
         return hashlib.sha256((token + self.salt).encode()).hexdigest()[:16].upper()
 
+    def _hide_file(self, filepath):
+        """Mark file as hidden (Windows only). Unix uses dot prefix handled by hidden_key_file."""
+        if os.name == 'nt':
+            try:
+                import subprocess
+                subprocess.run(['attrib', '+h', filepath], check=False)
+            except:
+                pass
+
+    def _save_key(self, key):
+        """Saves the key to a hidden file."""
+        target = self.hidden_key_file if os.name != 'nt' else self.key_file
+        try:
+            with open(target, 'w') as f:
+                f.write(key)
+            self._hide_file(target)
+            return True
+        except:
+            return False
+
     def verify(self):
         token = self.get_token()
-        if not os.path.exists(self.key_file):
-            return False, token
 
-        try:
-            with open(self.key_file, 'r') as f:
-                key = f.read().strip()
-            return key == self.generate_key(token), token
-        except:
-            return False, token
+        # Check both possible locations
+        key = None
+        for path in [self.key_file, self.hidden_key_file]:
+            if os.path.exists(path):
+                try:
+                    with open(path, 'r') as f:
+                        key = f.read().strip()
+                    if key == self.generate_key(token):
+                        return True, token
+                except:
+                    continue
+
+        # If no valid key found, prompt for activation
+        os.system('cls' if os.name == 'nt' else 'clear')
+        ascii_banner = pyfiglet.figlet_format("MagxxicVOT SMS", font="slant")
+        print(f"\033[1;35m{ascii_banner}\033[0m")
+        print("\033[1;31m" + "="*50)
+        print(" LICENSE ACTIVATION REQUIRED")
+        print("="*50 + "\033[0m")
+        print(f"\n[+] Your System Token: \033[1;32m{token}\033[0m")
+        print("\n[!] Instructions:")
+        print("1. Send the token above to the Administrator.")
+        print("2. Enter the Activation Key you receive below.")
+
+        while True:
+            input_key = input("\nEnter Activation Key (or 'Q' to quit): ").strip().upper()
+            if input_key == 'Q':
+                return False, token
+
+            if input_key == self.generate_key(token):
+                if self._save_key(input_key):
+                    print("\n\033[1;32m[+] License Activated Successfully!\033[0m")
+                    time.sleep(2)
+                    return True, token
+                else:
+                    print("\033[1;31m[-] Error saving license file.\033[0m")
+            else:
+                print("\033[1;31m[-] Invalid Activation Key. Please try again.\033[0m")
 
 license_manager = LicenseManager()
 
@@ -608,20 +660,6 @@ def main():
 
     is_active, token = license_manager.verify()
     if not is_active:
-        os.system('cls' if os.name == 'nt' else 'clear')
-        ascii_banner = pyfiglet.figlet_format("MagxxicVOT SMS", font="slant")
-        print(f"\033[1;35m{ascii_banner}\033[0m")
-        print("\033[1;31m" + "="*50)
-        print(" LICENSE ACTIVATION REQUIRED")
-        print("="*50 + "\033[0m")
-        print(f"\n[+] Your System Token: \033[1;32m{token}\033[0m")
-        print("\n[!] Instructions:")
-        print("1. Copy the token above.")
-        print("2. Send it to the Administrator to get your Activation Key.")
-        print("3. Create a file named 'license.key' in this folder.")
-        print("4. Paste your Activation Key into 'license.key' and restart the tool.")
-        print("\n" + "="*50)
-        input("\nPress Enter to exit...")
         return
 
     def send_sms_to_multiple(sms_function):
