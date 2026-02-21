@@ -20,7 +20,7 @@ from requests.exceptions import RequestException
 
 class LicenseManager:
     def __init__(self):
-        self.key_file = "license.key"
+        self.key_file = os.path.join(os.path.dirname(__file__), "license.key")
         self.salt = "MAGXXIC_VOT_SECRET_SALT_2024"
 
     def get_token(self):
