@@ -206,6 +206,32 @@ def generate_tracked_link(base_url, recipient):
 
 # --- Core Functions ---
 
+class LiveStatsTable:
+    def __init__(self):
+        self.results = []
+
+    def print_header(self):
+        print("\n\033[1;36m" + "┌" + "─"*5 + "┬" + "─"*16 + "┬" + "─"*12 + "┬" + "─"*10 + "┬" + "─"*30 + "┐")
+        print("│ " + "ID".ljust(3) + " │ " + "Phone Number".ljust(14) + " │ " + "Provider".ljust(10) + " │ " + "Status".ljust(8) + " │ " + "Details/ID".ljust(28) + " │")
+        print("├" + "─"*5 + "┼" + "─"*16 + "┼" + "─"*12 + "┼" + "─"*10 + "┼" + "─"*30 + "┤\033[0m")
+
+    def add_row(self, phone, provider, success, info):
+        idx = len(self.results) + 1
+        self.results.append((phone, provider, success, info))
+        status_color = "\033[1;32m" if success else "\033[1;31m"
+        status_text = "SUCCESS" if success else "FAILED"
+        # Truncate info to fit in table
+        display_info = (info[:25] + '...') if len(info) > 28 else info
+        print(f"\033[1;36m│\033[0m {str(idx).ljust(3)}   \033[1;36m│\033[0m {phone.ljust(14)} \033[1;36m│\033[0m {provider.ljust(10)} \033[1;36m│\033[0m {status_color}{status_text.ljust(8)}\033[0m \033[1;36m│\033[0m {display_info.ljust(28)} \033[1;36m│\033[0m")
+
+    def print_footer(self):
+        if not self.results:
+            return
+        success_count = sum(1 for r in self.results if r[2])
+        fail_count = len(self.results) - success_count
+        print("\033[1;36m└" + "─"*5 + "┴" + "─"*16 + "┴" + "─"*12 + "┴" + "─"*10 + "┴" + "─"*30 + "┘\033[0m")
+        print(f"\n\033[1;32mTotal Success: {success_count}\033[0m | \033[1;31mTotal Failed: {fail_count}\033[0m")
+
 def check_twilio_api(proxy=None):
     try:
         if not all([TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN]):
@@ -250,35 +276,30 @@ def check_vonage_api(proxy=None):
 def send_sms_twilio(phone_number, message, proxy=None):
     try:
         if not all([TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER]):
-            raise ConnectionError("Twilio credentials or phone number not configured.")
+            return False, "Twilio credentials not configured."
 
         client = twilio_client
         if proxy:
             from twilio.http.http_client import TwilioHttpClient
             http_client = TwilioHttpClient(proxy={'http': proxy, 'https': proxy})
             client = TwilioClient(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, http_client=http_client)
-            print(f"Using proxy: {proxy}")
 
         msg = client.messages.create(to=phone_number, from_=TWILIO_PHONE_NUMBER, body=message)
-        print(f"Twilio SMS sent to {phone_number}, SID: {msg.sid}")
+        return True, f"SID: {msg.sid}"
     except Exception as e:
-        print(f"Twilio SMS failed: {e}")
+        return False, str(e)
 
 def send_sms_vonage(phone_number, message, proxy=None):
     try:
         if not all([VONAGE_API_KEY, VONAGE_API_SECRET, VONAGE_PHONE_NUMBER]):
-            raise ConnectionError("Vonage credentials or phone number not configured.")
+            return False, "Vonage credentials not configured."
 
         client = vonage_client
         if proxy:
-            # For newer vonage versions
             from vonage import Client
             client = Client(key=VONAGE_API_KEY, secret=VONAGE_API_SECRET)
-            # Vonage doesn't have an easy way to set proxy in the constructor easily without more boilerplate
-            # But we can try setting environment variables for requests which it uses
             os.environ['HTTP_PROXY'] = proxy
             os.environ['HTTPS_PROXY'] = proxy
-            print(f"Using proxy: {proxy}")
 
         response = client.sms.send_message({'from': VONAGE_PHONE_NUMBER, 'to': phone_number, 'text': message})
 
@@ -287,97 +308,91 @@ def send_sms_vonage(phone_number, message, proxy=None):
             os.environ.pop('HTTPS_PROXY', None)
 
         if response["messages"][0]["status"] == "0":
-            print(f"Vonage SMS sent to {phone_number}, Message ID: {response['messages'][0]['message-id']}")
+            return True, f"ID: {response['messages'][0]['message-id']}"
         else:
-            print(f"Vonage SMS failed: {response['messages'][0]['error-text']}")
+            return False, response["messages"][0]["error-text"]
     except Exception as e:
-        print(f"Vonage SMS failed: {e}")
         os.environ.pop('HTTP_PROXY', None)
         os.environ.pop('HTTPS_PROXY', None)
+        return False, str(e)
 
 def send_sms_aws_sns(phone_number, message, proxy=None):
     try:
         if not all([AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION_NAME]):
-            raise ConnectionError("AWS SNS credentials not configured.")
+            return False, "AWS SNS credentials not configured."
 
         client = sns_client
         if proxy:
             from botocore.config import Config
             config = Config(proxies={'http': proxy, 'https': proxy})
             client = boto3.client('sns', aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY, region_name=AWS_REGION_NAME, config=config)
-            print(f"Using proxy: {proxy}")
 
         response = client.publish(PhoneNumber=phone_number, Message=message, MessageAttributes={'AWS.SNS.SMS.SMSType': {'DataType': 'String', 'StringValue': 'Transactional'}})
-        print(f"AWS SNS SMS sent to {phone_number}, Message ID: {response['MessageId']}")
+        return True, f"ID: {response['MessageId']}"
     except Exception as e:
-        print(f"AWS SNS SMS failed: {e}")
+        return False, str(e)
 
 def send_sms_plivo(phone_number, message, proxy=None):
     try:
         if not all([PLIVO_AUTH_ID, PLIVO_AUTH_TOKEN, PLIVO_PHONE_NUMBER]):
-            raise ConnectionError("Plivo credentials or phone number not configured.")
+            return False, "Plivo credentials not configured."
 
         client = plivo_client
         if proxy:
-            # Plivo uses 'proxydict' instead of 'proxies'
             client = plivo.RestClient(PLIVO_AUTH_ID, PLIVO_AUTH_TOKEN, proxydict={'http': proxy, 'https': proxy})
-            print(f"Using proxy: {proxy}")
 
         response = client.messages.create(src=PLIVO_PHONE_NUMBER, dst=phone_number, text=message)
-        print(f"Plivo SMS sent. Response: {response}")
+        return True, str(response)
     except PlivoRestError as e:
-        print(f"Plivo SMS failed: {e}")
+        return False, str(e)
 
 def send_sms_messagebird(phone_number, message, proxy=None):
     try:
         if not all([MESSAGEBIRD_API_KEY, MESSAGEBIRD_PHONE_NUMBER]):
-            raise ConnectionError("Messagebird credentials or phone number not configured.")
+            return False, "Messagebird credentials not configured."
 
         client = messagebird_client
         if proxy:
             os.environ['HTTP_PROXY'] = proxy
             os.environ['HTTPS_PROXY'] = proxy
             client = messagebird.Client(MESSAGEBIRD_API_KEY)
-            print(f"Using proxy: {proxy}")
 
         response = client.message_create(MESSAGEBIRD_PHONE_NUMBER, phone_number, message)
-        print(f"Messagebird SMS sent. Response: {response}")
 
         if proxy:
             os.environ.pop('HTTP_PROXY', None)
             os.environ.pop('HTTPS_PROXY', None)
+        return True, str(response)
     except messagebird.client.ErrorException as e:
-        print(f"Messagebird SMS failed: {e}")
         os.environ.pop('HTTP_PROXY', None)
         os.environ.pop('HTTPS_PROXY', None)
+        return False, str(e)
 
 def send_sms_telnyx(phone_number, message, proxy=None):
     try:
         if not all([TELNYX_API_KEY, TELNYX_PHONE_NUMBER]):
-            raise ConnectionError("Telnyx API key or phone number not configured.")
+            return False, "Telnyx credentials not configured."
 
         if proxy:
             telnyx.proxy = proxy
-            print(f"Using proxy: {proxy}")
         else:
             telnyx.proxy = None
 
-        telnyx.Message.create(to=phone_number, from_=TELNYX_PHONE_NUMBER, text=message)
-        print(f"Telnyx SMS sent to {phone_number}")
+        response = telnyx.Message.create(to=phone_number, from_=TELNYX_PHONE_NUMBER, text=message)
+        return True, "Sent"
     except telnyx.error.APIError as e:
-        print(f"Telnyx SMS failed: {e}")
+        return False, str(e)
 
 def send_sms_telesign(phone_number, message, proxy=None):
     try:
         if not all([TELESIGN_CUSTOMER_ID, TELESIGN_API_KEY]):
-            raise ConnectionError("Telesign credentials not configured.")
+            return False, "Telesign credentials not configured."
 
         client = telesign_client
         if proxy:
             os.environ['HTTP_PROXY'] = proxy
             os.environ['HTTPS_PROXY'] = proxy
             client = MessagingClient(TELESIGN_CUSTOMER_ID, TELESIGN_API_KEY)
-            print(f"Using proxy: {proxy}")
 
         response = client.message(phone_number, message, "ARN")
 
@@ -386,34 +401,29 @@ def send_sms_telesign(phone_number, message, proxy=None):
             os.environ.pop('HTTPS_PROXY', None)
 
         if response.ok:
-            print(f"Telesign SMS sent. Reference ID: {response.json['reference_id']}")
+            return True, f"Ref: {response.json['reference_id']}"
         else:
-            print(f"Telesign SMS failed: {response.body}")
+            return False, response.body
     except Exception as e:
         error_msg = str(e)
-        print(f"Telesign SMS failed: {error_msg}")
-        if "base64" in error_msg.lower() or "multiple of 4" in error_msg.lower():
-            print("\033[1;31m[!] HINT: Your Telesign API Key appears to be invalid or truncated.")
-            print(f"[!] Current Key Length: {len(TELESIGN_API_KEY) if TELESIGN_API_KEY else 0}. Expected: 88 characters.")
-            print("[!] Please check your credentials.env and ensure the full key (ending in ==) is copied.\033[0m")
         os.environ.pop('HTTP_PROXY', None)
         os.environ.pop('HTTPS_PROXY', None)
+        if "base64" in error_msg.lower() or "multiple of 4" in error_msg.lower():
+            return False, f"Key Error (Length: {len(TELESIGN_API_KEY) if TELESIGN_API_KEY else 0})"
+        return False, error_msg
 
 def send_sms_textbelt(phone_number, message, proxy=None):
     try:
         proxies = {"http": proxy, "https": proxy} if proxy else None
-        if proxy:
-            print(f"Using proxy: {proxy}")
-
         api_key = TEXTBELT_API_KEY if TEXTBELT_API_KEY else 'textbelt'
         response = requests.post('https://textbelt.com/text', {'phone': phone_number, 'message': message, 'key': api_key}, proxies=proxies).json()
 
         if response.get("success"):
-            print(f"TextBelt SMS sent to {phone_number}")
+            return True, "Sent"
         else:
-            print(f"TextBelt SMS failed: {response.get('error')}")
+            return False, response.get('error')
     except Exception as e:
-        print(f"TextBelt SMS failed: {e}")
+        return False, str(e)
 
 def generate_phone_number():
     number = f"+1{random.randint(200, 999)}{random.randint(200, 999)}{random.randint(1000, 9999)}"
@@ -573,6 +583,11 @@ def main():
     def send_sms_to_multiple(sms_function):
         """Gets input and sends SMS to multiple numbers."""
         phone_numbers, message = get_sms_input()
+
+        provider_name = sms_function.__name__.split('_')[-1].capitalize()
+        table = LiveStatsTable()
+        table.print_header()
+
         for number in phone_numbers:
             current_message = message
             if track_links and base_tracking_url:
@@ -580,7 +595,13 @@ def main():
                 current_message = f"{message} {tracked_link}"
 
             proxy = proxy_manager.get_next_proxy_url()
-            sms_function(number, current_message, proxy=proxy)
+            if proxy:
+                print(f"[Proxy: {proxy}]", end=" ", flush=True)
+
+            success, info = sms_function(number, current_message, proxy=proxy)
+            table.add_row(number, provider_name, success, info)
+
+        table.print_footer()
 
     actions = {
         '1': lambda: send_sms_to_multiple(send_sms_vonage),
