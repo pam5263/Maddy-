@@ -62,13 +62,20 @@ def load_credentials():
     env_path = os.path.join(os.path.dirname(__file__), "credentials.env")
     if os.path.exists(env_path):
         try:
+            loaded_count = 0
             with open(env_path, 'r') as f:
                 for line in f:
                     line = line.strip()
                     if line and not line.startswith('#') and '=' in line:
-                        key, value = line.split('=', 1)
-                        os.environ[key.strip()] = value.strip().strip('"').strip("'")
-            print(f"Loaded credentials from {env_path}")
+                        key_raw, value_raw = line.split('=', 1)
+                        key = key_raw.strip()
+                        value = value_raw.strip().strip('"').strip("'")
+                        os.environ[key] = value
+                        loaded_count += 1
+                        # Debug info for the user to verify length
+                        if "API_KEY" in key or "AUTH_TOKEN" in key or "SECRET" in key:
+                            print(f"[DEBUG] Loaded {key} (Length: {len(value)})")
+            print(f"Successfully loaded {loaded_count} credentials from {env_path}")
         except Exception as e:
             print(f"Error loading {env_path}: {e}")
 
@@ -383,7 +390,12 @@ def send_sms_telesign(phone_number, message, proxy=None):
         else:
             print(f"Telesign SMS failed: {response.body}")
     except Exception as e:
-        print(f"Telesign SMS failed: {e}")
+        error_msg = str(e)
+        print(f"Telesign SMS failed: {error_msg}")
+        if "base64" in error_msg.lower() or "multiple of 4" in error_msg.lower():
+            print("\033[1;31m[!] HINT: Your Telesign API Key appears to be invalid or truncated.")
+            print(f"[!] Current Key Length: {len(TELESIGN_API_KEY) if TELESIGN_API_KEY else 0}. Expected: 88 characters.")
+            print("[!] Please check your credentials.env and ensure the full key (ending in ==) is copied.\033[0m")
         os.environ.pop('HTTP_PROXY', None)
         os.environ.pop('HTTPS_PROXY', None)
 

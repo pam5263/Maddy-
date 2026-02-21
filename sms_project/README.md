@@ -42,6 +42,14 @@ A comprehensive bulk SMS sending tool supporting multiple providers.
    - `TELESIGN_CUSTOMER_ID` (or `TELESIGN_AUTH_ID`), `TELESIGN_API_KEY` (or `TELESIGN_AUTH_TOKEN`), `TELESIGN_PHONE_NUMBER`
    - `TEXTBELT_API_KEY`
 
+## Troubleshooting
+
+### "Invalid base64-encoded string" (Telesign)
+This error means your **Telesign API Key** is incorrect or incomplete.
+- Telesign API keys are exactly **88 characters** long and usually end with `==`.
+- Ensure you copied the entire string from the Telesign dashboard into `credentials.env`.
+- If the tool reports a length other than 88 during startup, you have a copy-paste error.
+
 ## Usage
 - Run the tool:
   - **Windows**: Double-click `start.bat`
