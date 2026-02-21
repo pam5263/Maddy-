@@ -99,33 +99,32 @@ class ProxyManager:
         except Exception as e:
             print(f"Error loading proxies: {e}")
 
-    def validate_proxies(self):
+    def validate_proxies(self, verbose=True):
         if not self.proxies:
-            print("No proxies to validate.")
+            if verbose: print("No proxies to validate.")
             return
         active_proxies = []
-        print("Validating proxies... this may take a while.")
+        if verbose: print(f"Validating {len(self.proxies)} proxies... this may take a while.")
         for proxy in self.proxies:
-            if self.check_proxy(proxy):
+            if self.check_proxy(proxy, verbose=False):
                 active_proxies.append(proxy)
-                print(f"Proxy {proxy} is active.")
+                if verbose: print(f"\033[1;32m[+] Proxy {proxy} is active.\033[0m")
             else:
-                print(f"Proxy {proxy} is dead.")
+                if verbose: print(f"\033[1;31m[-] Proxy {proxy} is dead.\033[0m")
         self.proxies = active_proxies
-        print(f"Validation complete. {len(self.proxies)} active proxies remain.")
+        self.current_index = 0  # Reset index after filtering
+        if verbose: print(f"Validation complete. {len(self.proxies)} active proxies remain.")
 
-    def check_proxy(self, proxy_str):
+    def check_proxy(self, proxy_str, verbose=True):
         try:
             proxy_url = proxy_str if "://" in proxy_str else f"socks5://{proxy_str}"
             proxies = {"http": proxy_url, "https": proxy_url}
             response = requests.get("https://api.ipify.org", proxies=proxies, timeout=5)
-            response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
+            response.raise_for_status()
             return response.status_code == 200
-        except RequestException as e:
-            print(f"Proxy check failed for {proxy_str}: Request Error - {e}")
-            return False
         except Exception as e:
-            print(f"Proxy check failed for {proxy_str}: General Error - {e}")
+            if verbose:
+                print(f"Proxy check failed for {proxy_str}: {e}")
             return False
 
     def get_next_proxy_url(self):
@@ -595,6 +594,13 @@ def main():
     def send_sms_to_multiple(sms_function):
         """Gets input and sends SMS to multiple numbers."""
         phone_numbers, message, delay, pause_at, pause_duration = get_sms_input()
+
+        if proxy_manager.enabled:
+            print("\033[1;33m[!] Proxy is enabled. Running mandatory live proxy check...\033[0m")
+            proxy_manager.validate_proxies(verbose=True)
+            if not proxy_manager.proxies:
+                print("\033[1;31m[!] Error: No live proxies available. Aborting.\033[0m")
+                return
 
         provider_name = sms_function.__name__.split('_')[-1].capitalize()
         table = LiveStatsTable()
