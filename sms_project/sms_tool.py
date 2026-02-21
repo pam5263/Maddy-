@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 
 # Compatibility shim for pkg_resources (required by telesign on newer Python versions)
 try:
@@ -469,7 +470,18 @@ def get_sms_input():
             print("Invalid choice. Please enter 'M' or 'F'.")
 
     message = input("Enter message: ")
-    return phone_numbers, message
+
+    try:
+        delay = float(input("Enter delay between messages (seconds, 0 for none): ") or 0)
+        pause_at = int(input("Pause after how many messages? (0 for none): ") or 0)
+        pause_duration = 0
+        if pause_at > 0:
+            pause_duration = float(input(f"Enter pause duration after {pause_at} messages (seconds): ") or 0)
+    except ValueError:
+        print("Invalid numerical input. Using defaults (no delay/pause).")
+        delay, pause_at, pause_duration = 0, 0, 0
+
+    return phone_numbers, message, delay, pause_at, pause_duration
 
 def get_phone_number_input():
     """Prompts user for a single phone number."""
@@ -582,13 +594,22 @@ def main():
 
     def send_sms_to_multiple(sms_function):
         """Gets input and sends SMS to multiple numbers."""
-        phone_numbers, message = get_sms_input()
+        phone_numbers, message, delay, pause_at, pause_duration = get_sms_input()
 
         provider_name = sms_function.__name__.split('_')[-1].capitalize()
         table = LiveStatsTable()
         table.print_header()
 
-        for number in phone_numbers:
+        for i, number in enumerate(phone_numbers):
+            # Implement pause logic
+            if i > 0 and pause_at > 0 and i % pause_at == 0:
+                print(f"\033[1;33m[!] Pausing for {pause_duration} seconds...\033[0m")
+                time.sleep(pause_duration)
+
+            # Implement delay logic
+            if i > 0 and delay > 0:
+                time.sleep(delay)
+
             current_message = message
             if track_links and base_tracking_url:
                 tracked_link = generate_tracked_link(base_tracking_url, number)
