@@ -57,6 +57,24 @@ class LicenseManager:
 
 license_manager = LicenseManager()
 
+def load_credentials():
+    """Loads credentials from credentials.env in the script's directory."""
+    env_path = os.path.join(os.path.dirname(__file__), "credentials.env")
+    if os.path.exists(env_path):
+        try:
+            with open(env_path, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith('#') and '=' in line:
+                        key, value = line.split('=', 1)
+                        os.environ[key.strip()] = value.strip().strip('"').strip("'")
+            print(f"Loaded credentials from {env_path}")
+        except Exception as e:
+            print(f"Error loading {env_path}: {e}")
+
+# Load credentials before environment variable setup
+load_credentials()
+
 # --- Proxy Management ---
 
 class ProxyManager:

@@ -22,8 +22,17 @@ A comprehensive bulk SMS sending tool supporting multiple providers.
    - Copy your System Token.
    - Run `python3 generate_key.py <TOKEN>` to get your Activation Key.
    - Create a file named `license.key` and paste the key.
-2. **Environment Variables**:
-   Set the following environment variables for your providers:
+2. **API Key Configuration**:
+   There are two ways to provide your API keys:
+
+   **Option A: Edit `credentials.env` (Recommended)**
+   - Open `credentials.env` in a text editor (like Notepad).
+   - Enter your keys after the `=` sign for each provider.
+   - Example: `TWILIO_ACCOUNT_SID=your_sid_here`
+   - Save the file and restart the tool.
+
+   **Option B: Environment Variables**
+   Set the following environment variables on your system:
    - `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`
    - `VONAGE_API_KEY`, `VONAGE_API_SECRET`, `VONAGE_PHONE_NUMBER`
    - `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION_NAME`
