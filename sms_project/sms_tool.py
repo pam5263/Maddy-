@@ -447,6 +447,15 @@ def check_and_filter_carrier_stub(phone_number):
 def get_sms_input():
     """Prompts user for phone numbers (manual or file) and a message."""
     phone_numbers = []
+
+    # Auto-load message files
+    message_files = []
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    for f in os.listdir(script_dir):
+        if f.startswith("message.txt"):
+            message_files.append(f)
+    message_files.sort()
+
     while True:
         choice = input("Enter 'M' for manual entry or 'F' to load from a file: ").upper()
         if choice == 'M':
@@ -468,7 +477,31 @@ def get_sms_input():
         else:
             print("Invalid choice. Please enter 'M' or 'F'.")
 
-    message = input("Enter message: ")
+    message = ""
+    if message_files:
+        print("\n--- Message Selection ---")
+        for idx, f in enumerate(message_files):
+            print(f"{idx + 1}. Load from {f}")
+        print(f"{len(message_files) + 1}. Enter message manually")
+
+        while True:
+            try:
+                m_choice = int(input(f"Select message source (1-{len(message_files) + 1}): "))
+                if 1 <= m_choice <= len(message_files):
+                    selected_file = os.path.join(script_dir, message_files[m_choice - 1])
+                    with open(selected_file, 'r') as f:
+                        message = f.read().strip()
+                    print(f"Loaded message from {message_files[m_choice - 1]}")
+                    break
+                elif m_choice == len(message_files) + 1:
+                    message = input("Enter message: ")
+                    break
+                else:
+                    print(f"Invalid choice. Please enter 1-{len(message_files) + 1}.")
+            except ValueError:
+                print("Please enter a valid number.")
+    else:
+        message = input("Enter message: ")
 
     try:
         delay = float(input("Enter delay between messages (seconds, 0 for none): ") or 0)

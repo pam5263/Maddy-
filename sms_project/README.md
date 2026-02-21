@@ -55,4 +55,5 @@ This error means your **Telesign API Key** is incorrect or incomplete.
   - **Windows**: Double-click `start.bat`
   - **Linux/macOS**: `python3 sms_tool.py`
 - Follow the on-screen menu instructions.
-- Load numbers from `numbers.txt` and proxies from `proxies.txt`.
+- **Messages**: You can create files named `message.txt1`, `message.txt2`, etc. in the tool's folder. The tool will automatically detect these and let you select one before sending.
+- **Bulk Data**: Load numbers from `numbers.txt` and proxies from `proxies.txt`.
