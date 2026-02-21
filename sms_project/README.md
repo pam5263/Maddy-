@@ -14,6 +14,8 @@ A comprehensive bulk SMS sending tool supporting multiple providers.
    - **Windows**: Double-click `setup.bat`
    - **Linux/macOS**: `pip install -r requirements.txt`
 
+> **Note**: If you encounter `ModuleNotFoundError: No module named 'pkg_resources'`, it means `setuptools` is missing. Running `setup.bat` (Windows) or `pip install setuptools` (Linux/macOS) will fix this.
+
 ## Setup
 1. **License Activation**:
    - Run `python3 sms_tool.py`.

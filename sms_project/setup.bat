@@ -1,5 +1,7 @@
 @echo off
 echo Installing dependencies for MagxxicVOT SMS Tool...
+python -m pip install --upgrade pip
+python -m pip install setuptools
 pip install -r requirements.txt
 if %errorlevel% neq 0 (
     echo.
