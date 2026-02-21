@@ -11,9 +11,8 @@ A comprehensive bulk SMS sending tool supporting multiple providers.
 
 ## Installation
 1. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+   - **Windows**: Double-click `setup.bat`
+   - **Linux/macOS**: `pip install -r requirements.txt`
 
 ## Setup
 1. **License Activation**:
@@ -30,8 +29,11 @@ A comprehensive bulk SMS sending tool supporting multiple providers.
    - `MESSAGEBIRD_API_KEY`, `MESSAGEBIRD_PHONE_NUMBER`
    - `TELNYX_API_KEY`, `TELNYX_PHONE_NUMBER`
    - `TELESIGN_CUSTOMER_ID` (or `TELESIGN_AUTH_ID`), `TELESIGN_API_KEY` (or `TELESIGN_AUTH_TOKEN`), `TELESIGN_PHONE_NUMBER`
+   - `TEXTBELT_API_KEY`
 
 ## Usage
-- Run the tool: `python3 sms_tool.py`
+- Run the tool:
+  - **Windows**: Double-click `start.bat`
+  - **Linux/macOS**: `python3 sms_tool.py`
 - Follow the on-screen menu instructions.
 - Load numbers from `numbers.txt` and proxies from `proxies.txt`.

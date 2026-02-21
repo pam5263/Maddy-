@@ -131,6 +131,7 @@ TELNYX_PHONE_NUMBER = os.environ.get("TELNYX_PHONE_NUMBER")
 TELESIGN_CUSTOMER_ID = os.environ.get("TELESIGN_CUSTOMER_ID") or os.environ.get("TELESIGN_AUTH_ID")
 TELESIGN_API_KEY = os.environ.get("TELESIGN_API_KEY") or os.environ.get("TELESIGN_AUTH_TOKEN")
 TELESIGN_PHONE_NUMBER = os.environ.get("TELESIGN_PHONE_NUMBER")
+TEXTBELT_API_KEY = os.environ.get("TEXTBELT_API_KEY")
 
 # --- Client Initialization ---
 twilio_client = TwilioClient(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN) if all([TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN]) else None
@@ -362,7 +363,10 @@ def send_sms_textbelt(phone_number, message, proxy=None):
         proxies = {"http": proxy, "https": proxy} if proxy else None
         if proxy:
             print(f"Using proxy: {proxy}")
-        response = requests.post('https://textbelt.com/text', {'phone': phone_number, 'message': message, 'key': 'textbelt'}, proxies=proxies).json()
+
+        api_key = TEXTBELT_API_KEY if TEXTBELT_API_KEY else 'textbelt'
+        response = requests.post('https://textbelt.com/text', {'phone': phone_number, 'message': message, 'key': api_key}, proxies=proxies).json()
+
         if response.get("success"):
             print(f"TextBelt SMS sent to {phone_number}")
         else:
