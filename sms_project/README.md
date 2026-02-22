@@ -58,3 +58,11 @@ This error means your **Telesign API Key** is incorrect or incomplete.
 - Follow the on-screen menu instructions.
 - **Messages**: You can create files named `message.txt1`, `message.txt2`, etc. in the tool's folder. The tool will automatically detect these and let you select one before sending.
 - **Bulk Data**: Load numbers from `numbers.txt` and proxies from `proxies.txt`.
+
+## For Administrators
+
+If you are an administrator, you can generate Activation Keys for your customers using the included tool:
+- **Windows**: Double-click `admin_start.bat`
+- **Linux/macOS**: `python3 admin_keygen.py`
+
+Simply enter the **System Token** provided by the customer to receive their unique **Activation Key**.
